@@ -24,7 +24,7 @@ body {
 }
 
 .camera__canvas {
-    /*width: 100%;*/
+    width: 100%;
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
@@ -40,4 +40,9 @@ body {
     margin: 20px;
     padding: 10px;
     font-size: 2em;
+    border: 0; /* для того чтобы Webkit ставил шрифт в 2em 
+    (от 0px до 10px - 10px, от 11px до 15px - 11px, от >=16 - 14px)
+    Так же чтобы решить эту проблему - задать -webkit-appearance: none;
+    но тогда не будет стрелок, поэтому выбор на border: 0; 
+    */
 }
