@@ -1,10 +1,12 @@
 (function () {
     var video = document.querySelector('.camera__video'),
         canvas = document.querySelector('.camera__canvas'),
+        context = canvas.getContext('2d');
         canvasWidth = 640,
-        canvasHeight = 480;
+        canvasHeight = 480,
+        isStreaming = false;
 
-    var getVideoStream = function (callback) {
+    function getVideoStream(callback) {
         navigator.getUserMedia = navigator.getUserMedia ||
             navigator.webkitGetUserMedia ||
             navigator.mozGetUserMedia;
@@ -21,15 +23,15 @@
                     };
                 },
                 function (err) {
-                    console.log("The following error occured: " + err.name);
+                    alert("The following error occured: " + err.name); 
                 }
             );
         } else {
-            console.log("getUserMedia not supported");
+            alert("getUserMedia not supported"); // Выводить алертом ошибку, чтобы каждый мог видеть ее сразу (не только раработчик)
         }
     };
 
-    var applyFilterToPixels = function (pixels) {
+    function applyFilterToPixels(pixels) {
         var filters = {
             invert: function () {
                 for (var i = 0; i < pixels.length; i += 4) { // i+=4 т.к. 1 пиксель представлен 4-мя значениями rgba соответственно, которые и меняем далее
@@ -64,27 +66,49 @@
         return filters[filterName]();
     };
 
-    var applyFilter = function () {
+    function applyFilter() {
         // Возвращает данные о цвете (RGB) и прозрачности всей канвы
-        var imageData = canvas.getContext('2d').getImageData(0, 0, canvasWidth,  canvasHeight);
+        var imageData = context.getImageData(0, 0, canvasWidth,  canvasHeight);
         // Метод  getImageData затратный, поэтому применять его к каждому пикселю отдельно не стоит => применяем сразу ко всей канве
         var pixels = imageData.data; //массив значений
         pixels = applyFilterToPixels(pixels); // фильтр
-        canvas.getContext('2d').putImageData(imageData, 0, 0); // Помещаем на канву объект imageData
+        context.putImageData(imageData, 0, 0); // Помещаем на канву объект imageData
         // putImageData затратный, поступаем также как и с getImageData 
     };
 
-    var captureFrame = function () {
-      if (video.videoWidth > 0) {canvasHeight = video.videoHeight; canvasWidth = video.videoWidth;}
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
-        // Смещаем координаты и зеркалим
-        canvas.getContext('2d').translate(canvasWidth, 0);
-        canvas.getContext('2d').scale(-1, 1);
+    function captureFrame() {
+        // Делаем операции с канвой только раз, чтобы они не выполнялись каждые 16 миллисекунд
+        if (!isStreaming) { 
+            if (video.videoWidth > 0) {
+                canvasHeight = video.videoHeight;
+                canvasWidth = video.videoWidth;
+            }
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            // Смещаем координаты и зеркалим
+            context.translate(canvasWidth, 0);
+            context.scale(-1, 1);
+            isStreaming = true;
+        }
 
-        canvas.getContext('2d').drawImage(video, 0, 0); // Выводит изображение
-        applyFilter();
+        drawVideo();
+       
     };
+
+    //Баг 879717 в Firefox
+    function drawVideo() {
+      try {
+        context.drawImage(video, 0, 0); // Выводит изображение
+        applyFilter();
+      } catch (e) {
+        if (e.name == "NS_ERROR_NOT_AVAILABLE") {
+          // Если ошибка подождать и запустить опять функцию
+          setTimeout(drawVideo, 70);
+        } else {
+          throw e;
+        }
+      }
+    }
 
     getVideoStream(function () {
         /*captureFrame();*/
