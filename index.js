@@ -4,7 +4,9 @@
         context = canvas.getContext('2d');
         canvasWidth = 640,
         canvasHeight = 480,
-        isStreaming = false;
+        isStreaming = false,
+        filterSelect = document.querySelector('.controls__filter'),
+        filterName = filterSelect.value;
 
     function getVideoStream(callback) {
         navigator.getUserMedia = navigator.getUserMedia ||
@@ -61,7 +63,11 @@
             }
         };
 
-        var filterName = document.querySelector('.controls__filter').value;
+        filterSelect.onchange = function(){
+            // Меняем filterName только если изменяется выбранный option элемента <select>, 
+            // а не каждые 16 миллисекунд
+            filterName = this.value; 
+        };
 
         return filters[filterName]();
     };
