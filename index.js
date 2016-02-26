@@ -7,13 +7,36 @@
         isStreaming = false,
         filterSelect = document.querySelector('.controls__filter'),
         filterName = filterSelect.value;
-
+    
+    function oldGetUserMedia(constraints, success, error) {
+        var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+        
+        // Если нет поддержки getUserMedia
+        if (!getUserMedia) {
+            return Promise.reject(
+                new Error('getUserMedia not supported')
+            );
+        }
+        
+        return new Promise(function (success, error) {
+            getUserMedia.call(navigator, constraints, success, error);
+        });
+    }
+    
     function getVideoStream(callback) {
-        navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-
-        if (navigator.getUserMedia) {
-            navigator.getUserMedia(
-                {video: true},
+        // Старые браузеры могут не поддерживать mediaDevices
+        if (navigator.mediaDevices === undefined) {
+            navigator.mediaDevices = {};
+        }
+        
+        // Некоторые браузеры частично поддерживают mediaDevices
+        if (navigator.mediaDevices.getUserMedia === undefined) {
+            navigator.mediaDevices.getUserMedia = oldGetUserMedia;
+        }
+        
+        var constraints = {video : true};
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(
                 function (stream) {
                     var url = window.URL || window.webkitURL;
                     video.src = url ? url.createObjectURL(stream) : stream;
@@ -22,14 +45,13 @@
 
                         callback();
                     };
-                },
-                function (err) {
-                    alert("The following error occured: " + err.name);
                 }
-            );
-        } else {
-            alert("getUserMedia not supported"); // Выводить алертом ошибку, чтобы каждый мог видеть ее сразу (не только раработчик)
-        }
+            )
+            .catch(
+                function (err) {
+                    alert(err); // Выводить алертом ошибку, чтобы каждый мог видеть ее сразу (не только раработчик)
+                }
+            )
     }
 
     function applyFilterToPixels(pixels) {
