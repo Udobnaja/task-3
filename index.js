@@ -1,7 +1,7 @@
 (function () {
     var video = document.querySelector('.camera__video'),
         canvas = document.querySelector('.camera__canvas'),
-        context = canvas.getContext('2d');
+        context = canvas.getContext('2d'),
         canvasWidth = 640,
         canvasHeight = 480,
         isStreaming = false,
@@ -9,82 +9,119 @@
         filterName = filterSelect.value;
 
     function getVideoStream(callback) {
-        navigator.getUserMedia = navigator.getUserMedia ||
-            navigator.webkitGetUserMedia ||
-            navigator.mozGetUserMedia;
+        navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 
         if (navigator.getUserMedia) {
-            navigator.getUserMedia({video: true},
+            navigator.getUserMedia(
+                {video: true},
                 function (stream) {
-                    var url = window.URL || window.webkitURL; 
+                    var url = window.URL || window.webkitURL;
                     video.src = url ? url.createObjectURL(stream) : stream;
-                    video.onloadedmetadata = function (e) {
+                    video.onloadedmetadata = function () {
                         video.play();
 
                         callback();
                     };
                 },
                 function (err) {
-                    alert("The following error occured: " + err.name); 
+                    alert("The following error occured: " + err.name);
                 }
             );
         } else {
             alert("getUserMedia not supported"); // Выводить алертом ошибку, чтобы каждый мог видеть ее сразу (не только раработчик)
         }
-    };
+    }
 
     function applyFilterToPixels(pixels) {
-        var filters = {
-            invert: function () {
-                for (var i = 0; i < pixels.length; i += 4) { // i+=4 т.к. 1 пиксель представлен 4-мя значениями rgba соответственно, которые и меняем далее
-                  pixels[i]     = 255 - pixels[i];     
-                  pixels[i + 1] = 255 - pixels[i + 1]; 
-                  pixels[i + 2] = 255 - pixels[i + 2]; 
-                }
-            },
-            grayscale: function () {
-                for (var i = 0; i < pixels.length; i += 4) {
-                  var r = pixels[i];
-                  var g = pixels[i+1];
-                  var b = pixels[i+2];
-                  var v = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        var i,
+            length = pixels.length, // переменная для хранения длины массива
+            r,
+            g,
+            b,
+            v,
+            filters = {
+                invert: function () {
+                    for (i = 0; i < length; i += 4) { // i+=4 т.к. 1 пиксель представлен 4-мя значениями rgba соответственно, которые и меняем далее
+                        pixels[i] = 255 - pixels[i];
+                        pixels[i + 1] = 255 - pixels[i + 1];
+                        pixels[i + 2] = 255 - pixels[i + 2];
+                    }
+                },
+                grayscale: function () {
+                    for (i = 0; i < length; i += 4) {
+                        r = pixels[i];
+                        g = pixels[i + 1];
+                        b = pixels[i + 2];
+                        v = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
-                  pixels[i] = pixels[i+1] = pixels[i+2] = v;
+                        pixels[i] = pixels[i + 1] = pixels[i + 2] = v;
+                    }
+                },
+                threshold: function () {
+                    for (i = 0; i < length; i += 4) {
+                        r = pixels[i];
+                        g = pixels[i + 1];
+                        b = pixels[i + 2];
+                        v = (0.2126 * r + 0.7152 * g + 0.0722 * b >= 128) ? 255 : 0;
+                        pixels[i] = pixels[i + 1] = pixels[i + 2] = v;
+                    }
                 }
-            },
-            threshold: function () {
-                for (var i = 0; i < pixels.length; i += 4) {
-                  var r = pixels[i];
-                  var g = pixels[i+1];
-                  var b = pixels[i+2];
-                  var v = (0.2126 * r + 0.7152 * g + 0.0722 * b >= 128) ? 255 : 0;
-                  pixels[i] = pixels[i+1] = pixels[i+2] = v;
-                }
-            }
-        };
+            };
 
-        filterSelect.onchange = function(){
-            // Меняем filterName только если изменяется выбранный option элемента <select>, 
+        filterSelect.onchange = function () {
+            // Меняем filterName только если изменяется выбранный option элемента <select>,
             // а не каждые 16 миллисекунд
-            filterName = this.value; 
+            filterName = this.value;
         };
 
         return filters[filterName]();
-    };
+        /*
+            Так же можно функции фильтров не вкладывать в цикл for, а просто потом вызывать
+            for (var i = 0; i < pixels.length; i += 4){
+                filters[filterName]();
+            }
+            return pixels;
+            Но тогда captureFrame() выполняется чуть медленнее
+
+            Можно изменить порядок перебора массива на обратный
+            for (i = pixels.length-1; i >= 0; i -= 4) {
+              pixels[i - 3]     = 255 - pixels[i - 3];
+              pixels[i - 2] = 255 - pixels[i - 2];
+              pixels[i - 1] = 255 - pixels[i - 1];
+            }
+            Но это не принесет существенной оптимизации
+        */
+    }
 
     function applyFilter() {
         // Возвращает данные о цвете (RGB) и прозрачности всей канвы
-        var imageData = context.getImageData(0, 0, canvasWidth,  canvasHeight);
+        var imageData = context.getImageData(0, 0, canvasWidth, canvasHeight),
         // Метод  getImageData затратный, поэтому применять его к каждому пикселю отдельно не стоит => применяем сразу ко всей канве
-        var pixels = imageData.data; //массив значений
+            pixels = imageData.data; //массив значений
         pixels = applyFilterToPixels(pixels); // фильтр
         context.putImageData(imageData, 0, 0); // Помещаем на канву объект imageData
-        // putImageData затратный, поступаем также как и с getImageData 
-    };
+        // putImageData затратный, поступаем также как и с getImageData
+    }
+
+    //Баг 879717 в Firefox
+    function drawVideo() {
+        try {
+            context.drawImage(video, 0, 0); // Выводит изображение
+            applyFilter();
+        } catch (e) {
+            if (e.name === "NS_ERROR_NOT_AVAILABLE") {
+              // Если ошибка подождать и запустить опять функцию
+                setTimeout(drawVideo, 70);
+            } else {
+                throw e;
+            }
+        }
+    }
 
     function captureFrame() {
+        var start = new Date().getTime();
         // Делаем операции с канвой только раз, чтобы они не выполнялись каждые 16 миллисекунд
-        if (!isStreaming) { 
+        if (!isStreaming) {
             if (video.videoWidth > 0) {
                 canvasHeight = video.videoHeight;
                 canvasWidth = video.videoWidth;
@@ -98,22 +135,9 @@
         }
 
         drawVideo();
-       
-    };
+        var el = new Date().getTime() - start;
+        console.log(el);
 
-    //Баг 879717 в Firefox
-    function drawVideo() {
-      try {
-        context.drawImage(video, 0, 0); // Выводит изображение
-        applyFilter();
-      } catch (e) {
-        if (e.name == "NS_ERROR_NOT_AVAILABLE") {
-          // Если ошибка подождать и запустить опять функцию
-          setTimeout(drawVideo, 70);
-        } else {
-          throw e;
-        }
-      }
     }
 
     getVideoStream(function () {
@@ -121,4 +145,4 @@
 
         setInterval(captureFrame, 16);
     });
-})();
+}());
