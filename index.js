@@ -35,6 +35,7 @@
         }
         
         var constraints = {video : true};
+		
         navigator.mediaDevices.getUserMedia(constraints)
             .then(
                 function (stream) {
@@ -51,7 +52,7 @@
                 function (err) {
                     alert(err); // Выводить алертом ошибку, чтобы каждый мог видеть ее сразу (не только раработчик)
                 }
-            )
+            );
     }
 
     function applyFilterToPixels(pixels) {
@@ -141,7 +142,6 @@
     }
 
     function captureFrame() {
-        var start = new Date().getTime();
         // Делаем операции с канвой только раз, чтобы они не выполнялись каждые 16 миллисекунд
         if (!isStreaming) {
             if (video.videoWidth > 0) {
@@ -157,8 +157,6 @@
         }
 
         drawVideo();
-        var el = new Date().getTime() - start;
-        console.log(el);
 
     }
 
