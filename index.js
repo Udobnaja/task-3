@@ -93,7 +93,7 @@
 
         filterSelect.onchange = function () {
             // Меняем filterName только если изменяется выбранный option элемента <select>,
-            // а не каждые 16 миллисекунд
+            // а не постоянно
             filterName = this.value;
         };
 
@@ -142,7 +142,9 @@
     }
 
     function captureFrame() {
-        // Делаем операции с канвой только раз, чтобы они не выполнялись каждые 16 миллисекунд
+        // небольшое увеличение fps, устанавливать таймер через setTimeout не стала
+        requestAnimationFrame(captureFrame); 
+        // Делаем операции с канвой только раз, чтобы они не выполнялись постоянно
         if (!isStreaming) {
             if (video.videoWidth > 0) {
                 canvasHeight = video.videoHeight;
@@ -161,8 +163,8 @@
     }
 
     getVideoStream(function () {
-        /*captureFrame();*/
+        captureFrame();
 
-        setInterval(captureFrame, 16);
+        // setInterval(captureFrame, 16);
     });
 }());
