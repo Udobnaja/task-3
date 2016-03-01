@@ -143,7 +143,7 @@
 
     function captureFrame() {
         // небольшое увеличение fps, устанавливать таймер через setTimeout не стала
-        requestAnimationFrame(captureFrame); 
+        requestAnimationFrame(captureFrame);
         // Делаем операции с канвой только раз, чтобы они не выполнялись постоянно
         if (!isStreaming) {
             if (video.videoWidth > 0) {
